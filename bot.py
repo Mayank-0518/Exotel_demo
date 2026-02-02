@@ -128,6 +128,24 @@ async def bot(runner_args: RunnerArguments):
 
 
 if __name__ == "__main__":
-    from pipecat.runner.run import main
+    import argparse
+    import uvicorn
+    from fastapi import FastAPI, WebSocket
+    from pipecat.runner.types import WebSocketRunnerArguments
 
-    main()
+    app = FastAPI()
+
+    @app.websocket("/ws")
+    async def websocket_endpoint(websocket: WebSocket):
+        await websocket.accept()
+        # Create runner args with the raw websocket
+        runner_args = WebSocketRunnerArguments(websocket=websocket)
+        await bot(runner_args)
+
+    parser = argparse.ArgumentParser(description="Pipecat Bot")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host address")
+    parser.add_argument("--port", type=int, default=7860, help="Port number")
+    args, _ = parser.parse_known_args()
+
+    # Run uvicorn with forwarded_allow_ips to match your network setup
+    uvicorn.run(app, host=args.host, port=args.port, forwarded_allow_ips="*")
